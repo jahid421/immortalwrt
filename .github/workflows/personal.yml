@@ -1,4 +1,4 @@
-name: Build OpenClash for Mi Router 4C
+name: newBuild OpenClash for Mi Router 4C
 
 on:
   workflow_dispatch:
