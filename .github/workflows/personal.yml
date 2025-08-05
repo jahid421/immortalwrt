@@ -1,0 +1,54 @@
+name: Build OpenClash for Mi Router 4C
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang flex bison g++ gawk \
+            gcc-multilib g++-multilib gettext git libncurses-dev \
+            libssl-dev python3-distutils rsync unzip zlib1g-dev
+
+      - name: Clone ImmortalWrt
+        run: |
+          git clone --depth=1 https://github.com/immortalwrt/immortalwrt
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Create .config
+        run: |
+          cd immortalwrt
+          echo "CONFIG_TARGET_ramips=y" > .config
+          echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
+          echo "CONFIG_TARGET_ramips_mt76x8_DEVICE_xiaomi_mir4c=y" >> .config
+          echo "CONFIG_PACKAGE_luci=y" >> .config
+          echo "CONFIG_PACKAGE_luci-theme-bootstrap=y" >> .config
+          echo "CONFIG_PACKAGE_luci-app-openclash=y" >> .config
+          echo "CONFIG_PACKAGE_libustream-openssl=y" >> .config
+          echo "CONFIG_PACKAGE_luci-ssl-openssl=y" >> .config
+          echo "CONFIG_PACKAGE_ip-full=y" >> .config
+          echo "CONFIG_PACKAGE_coreutils-nohup=y" >> .config
+          echo "CONFIG_PACKAGE_tcpdump-mini=y" >> .config
+
+      - name: Build firmware
+        run: |
+          cd immortalwrt
+          make defconfig
+          make download -j8
+          make -j$(nproc) || make -j1 V=s
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v2
+        with:
+          name: OpenClash-Mi4C
+          path: immortalwrt/bin/targets/
